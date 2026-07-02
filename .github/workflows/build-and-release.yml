@@ -17,8 +17,6 @@ jobs:
         include:
           - os: ubuntu-latest
             suffix: linux-x64
-          - os: macos-13
-            suffix: macos-x64
           - os: macos-14
             suffix: macos-arm64
           - os: windows-latest
@@ -87,7 +85,7 @@ jobs:
         id: version
         run: |
           FILE=$(ls binaries/bird-* 2>/dev/null | head -1)
-          VERSION=$(echo "$FILE" | sed 's/.*bird-//' | sed 's/-linux-x64//' | sed 's/-macos-x64//' | sed 's/-macos-arm64//' | sed 's/-windows-x64//' | sed 's/\.exe$//')
+          VERSION=$(echo "$FILE" | sed 's/.*bird-//' | sed 's/-linux-x64//' | sed 's/-macos-arm64//' | sed 's/-windows-x64//' | sed 's/\.exe$//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create release in x-view (public)
