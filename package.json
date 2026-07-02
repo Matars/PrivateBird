@@ -1,7 +1,7 @@
 {
-  "name": "@matar/bird",
+  "name": "@matar/privatebird",
   "version": "1.0.0",
-  "description": "Opinionated X/Twitter CLI — fast, cookie-auth, for agents.",
+  "description": "PrivateBird CLI — fast X/Twitter from the terminal.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
