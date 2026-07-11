@@ -32,6 +32,9 @@ export type GraphqlTweetResult = {
     reply_count?: number;
     retweet_count?: number;
     favorite_count?: number;
+    favorited?: boolean;
+    bookmarked?: boolean;
+    retweeted?: boolean;
     conversation_id_str?: string;
     in_reply_to_status_id_str?: string | null;
     entities?: {
@@ -49,10 +52,14 @@ export type GraphqlTweetResult = {
         legacy?: {
           screen_name?: string;
           name?: string;
+          profile_image_url_https?: string;
         };
         core?: {
           screen_name?: string;
           name?: string;
+        };
+        avatar?: {
+          image_url?: string;
         };
       };
     };
@@ -265,12 +272,16 @@ export interface TweetData {
   author: {
     username: string;
     name: string;
+    profileImageUrl?: string;
   };
   authorId?: string;
   createdAt?: string;
   replyCount?: number;
   retweetCount?: number;
   likeCount?: number;
+  favorited?: boolean;
+  bookmarked?: boolean;
+  retweeted?: boolean;
   conversationId?: string;
   inReplyToStatusId?: string;
   // Optional quoted tweet; depth controlled by quoteDepth (default: 1).

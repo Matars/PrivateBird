@@ -58,4 +58,71 @@ describe('mapTweetResult media', () => {
     const mapped = mapTweetResult(result, 0);
     expect(mapped?.media).toBeUndefined();
   });
+
+  it('includes the author profile image used by web clients', () => {
+    const result: GraphqlTweetResult = {
+      rest_id: '3',
+      legacy: { full_text: 'avatar test' },
+      core: {
+        user_results: {
+          result: {
+            rest_id: 'u1',
+            legacy: {
+              screen_name: 'alice',
+              name: 'Alice',
+              profile_image_url_https: 'https://pbs.twimg.com/profile_images/alice_normal.jpg',
+            },
+          },
+        },
+      },
+    };
+
+    expect(mapTweetResult(result, 0)?.author.profileImageUrl).toBe(
+      'https://pbs.twimg.com/profile_images/alice_normal.jpg',
+    );
+  });
+
+  it('prefers a browser-compatible 1080p MP4 over a level-5.2 4K variant', () => {
+    const result: GraphqlTweetResult = {
+      rest_id: '4',
+      legacy: {
+        full_text: 'video test',
+        extended_entities: {
+          media: [{
+            type: 'video',
+            media_url_https: 'https://pbs.twimg.com/video_thumb.jpg',
+            video_info: {
+              variants: [
+                { bitrate: 12_000_000, content_type: 'video/mp4', url: 'https://video.twimg.com/vid/avc1/3348x2160/4k.mp4' },
+                { bitrate: 5_000_000, content_type: 'video/mp4', url: 'https://video.twimg.com/vid/avc1/1920x1080/1080p.mp4' },
+                { bitrate: 2_000_000, content_type: 'video/mp4', url: 'https://video.twimg.com/vid/avc1/1280x720/720p.mp4' },
+              ],
+            },
+          }],
+        },
+      },
+      ...makeUserResult(),
+    };
+
+    expect(mapTweetResult(result, 0)?.media?.[0]?.videoUrl).toContain('/1920x1080/');
+  });
+
+  it('preserves engagement state for optimistic controls', () => {
+    const result: GraphqlTweetResult = {
+      rest_id: '5',
+      legacy: {
+        full_text: 'state test',
+        favorited: true,
+        bookmarked: true,
+        retweeted: true,
+      },
+      ...makeUserResult(),
+    };
+
+    expect(mapTweetResult(result, 0)).toMatchObject({
+      favorited: true,
+      bookmarked: true,
+      retweeted: true,
+    });
+  });
 });

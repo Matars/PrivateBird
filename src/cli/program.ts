@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { registerBookmarksCommand } from '../commands/bookmarks.js';
 import { registerCheckCommand } from '../commands/check.js';
+import { registerEngagementCommands } from '../commands/engagement.js';
 import { registerFollowCommands } from '../commands/follow.js';
 import { registerHelpCommand } from '../commands/help.js';
 import { registerHomeCommand } from '../commands/home.js';
@@ -10,6 +11,8 @@ import { registerPostCommands } from '../commands/post.js';
 import { registerQueryIdsCommand } from '../commands/query-ids.js';
 import { registerReadCommands } from '../commands/read.js';
 import { registerSearchCommands } from '../commands/search.js';
+import { registerLikeCommand } from '../commands/like.js';
+import { registerUnlikeCommand } from '../commands/unlike.js';
 import { registerUnbookmarkCommand } from '../commands/unbookmark.js';
 import { registerUserTweetsCommand } from '../commands/user-tweets.js';
 import { registerUserCommands } from '../commands/users.js';
@@ -26,7 +29,12 @@ export const KNOWN_COMMANDS = new Set([
   'search',
   'mentions',
   'bookmarks',
+  'bookmark',
   'unbookmark',
+  'like',
+  'unlike',
+  'retweet',
+  'unretweet',
   'follow',
   'unfollow',
   'following',
@@ -144,7 +152,10 @@ export function createProgram(ctx: CliContext): Command {
   registerReadCommands(program, ctx);
   registerSearchCommands(program, ctx);
   registerBookmarksCommand(program, ctx);
+  registerEngagementCommands(program, ctx);
   registerUnbookmarkCommand(program, ctx);
+  registerLikeCommand(program, ctx);
+  registerUnlikeCommand(program, ctx);
   registerFollowCommands(program, ctx);
   registerListsCommand(program, ctx);
   registerHomeCommand(program, ctx);

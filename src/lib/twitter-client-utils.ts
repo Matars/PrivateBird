@@ -488,7 +488,16 @@ export function extractMedia(result: GraphqlTweetResult | undefined): TweetMedia
       const mp4WithBitrate = mp4Variants
         .filter((v): v is { bitrate: number; content_type: string; url: string } => typeof v.bitrate === 'number')
         .sort((a, b) => b.bitrate - a.bitrate);
-      const selectedVariant = mp4WithBitrate[0] ?? mp4Variants[0];
+      // Firefox and some hardware decoders reject X's H.264 level-5.2 4K
+      // renditions. Prefer the highest-bitrate variant at or below 1080p.
+      const browserCompatible = mp4WithBitrate.filter((variant) => {
+        const dimensions = variant.url.match(/\/(\d+)x(\d+)\//);
+        if (!dimensions) return true;
+        const width = Number(dimensions[1]);
+        const height = Number(dimensions[2]);
+        return Math.max(width, height) <= 1920 && Math.min(width, height) <= 1080;
+      });
+      const selectedVariant = browserCompatible[0] ?? mp4WithBitrate[0] ?? mp4Variants[0];
 
       if (selectedVariant) {
         mediaItem.videoUrl = selectedVariant.url;
@@ -561,11 +570,15 @@ export function mapTweetResult(
     replyCount: result.legacy?.reply_count,
     retweetCount: result.legacy?.retweet_count,
     likeCount: result.legacy?.favorite_count,
+    favorited: result.legacy?.favorited,
+    bookmarked: result.legacy?.bookmarked,
+    retweeted: result.legacy?.retweeted,
     conversationId: result.legacy?.conversation_id_str,
     inReplyToStatusId: result.legacy?.in_reply_to_status_id_str ?? undefined,
     author: {
       username,
       name: name || username,
+      profileImageUrl: userLegacy?.profile_image_url_https ?? userResult?.avatar?.image_url,
     },
     authorId: userId,
     quotedTweet,

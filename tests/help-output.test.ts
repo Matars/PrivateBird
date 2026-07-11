@@ -25,6 +25,16 @@ describe('root help output', () => {
     expect(help).toContain('_raw');
   });
 
+  it('registers every engagement mutation used by XView', () => {
+    const ctx = createCliContext([]);
+    const program = createProgram(ctx);
+    const commands = new Set(program.commands.map((command) => command.name()));
+
+    for (const command of ['like', 'unlike', 'bookmark', 'unbookmark', 'retweet', 'unretweet']) {
+      expect(commands.has(command), `${command} should be registered`).toBe(true);
+    }
+  });
+
   it('shows global options in subcommand help', () => {
     const ctx = createCliContext([]);
     const program = createProgram(ctx);
