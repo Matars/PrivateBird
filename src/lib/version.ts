@@ -137,39 +137,39 @@ function resolveGitShaFromGitDir(gitDir: string): string | null {
   return null;
 }
 
-export function resolveGitSha(importMetaUrl?: string): string | null {
-  const injected =
-    typeof process !== 'undefined' && typeof process.env.BIRD_GIT_SHA === 'string'
-      ? process.env.BIRD_GIT_SHA.trim()
-      : '';
-  if (injected.length > 0) {
-    return truncateSha(injected);
+function resolveGitShaAtDir(dir: string): string | null | undefined {
+  const dotGit = path.join(dir, '.git');
+  try {
+    const stat = fs.statSync(dotGit);
+    if (stat.isDirectory()) {
+      return resolveGitShaFromGitDir(dotGit);
+    }
+    if (stat.isFile()) {
+      const txt = fs.readFileSync(dotGit, 'utf8');
+      const match = GITDIR_REGEX.exec(txt);
+      const gitDir = match?.[1]?.trim();
+      if (!gitDir) {
+        return null;
+      }
+      const resolved = path.isAbsolute(gitDir) ? gitDir : path.resolve(dir, gitDir);
+      return resolveGitShaFromGitDir(resolved);
+    }
+  } catch {
+    return undefined;
   }
 
-  let dir = resolveStartDir(importMetaUrl);
+  return undefined;
+}
+
+function resolvePackageRoot(startDir: string): string | null {
+  let dir = startDir;
   for (let i = 0; i < 10; i += 1) {
-    const dotGit = path.join(dir, '.git');
     try {
-      const stat = fs.statSync(dotGit);
-      if (stat.isDirectory()) {
-        const sha = resolveGitShaFromGitDir(dotGit);
-        if (sha) {
-          return sha;
-        }
-      } else if (stat.isFile()) {
-        const txt = fs.readFileSync(dotGit, 'utf8');
-        const match = GITDIR_REGEX.exec(txt);
-        const gitDir = match?.[1]?.trim();
-        if (gitDir) {
-          const resolved = path.isAbsolute(gitDir) ? gitDir : path.resolve(dir, gitDir);
-          const sha = resolveGitShaFromGitDir(resolved);
-          if (sha) {
-            return sha;
-          }
-        }
+      if (fs.statSync(path.join(dir, 'package.json')).isFile()) {
+        return dir;
       }
     } catch {
-      // ignore
+      // Continue searching for the package boundary.
     }
 
     const parent = path.dirname(dir);
@@ -180,6 +180,34 @@ export function resolveGitSha(importMetaUrl?: string): string | null {
   }
 
   return null;
+}
+
+export function resolveGitSha(importMetaUrl?: string): string | null {
+  const injected =
+    typeof process !== 'undefined' && typeof process.env.BIRD_GIT_SHA === 'string'
+      ? process.env.BIRD_GIT_SHA.trim()
+      : '';
+  if (injected.length > 0) {
+    return truncateSha(injected);
+  }
+
+  const startDir = resolveStartDir(importMetaUrl);
+  const packageRoot = resolvePackageRoot(startDir);
+  if (!packageRoot) {
+    return resolveGitShaAtDir(startDir) ?? null;
+  }
+
+  let dir = startDir;
+  while (true) {
+    const sha = resolveGitShaAtDir(dir);
+    if (sha !== undefined) {
+      return sha;
+    }
+    if (dir === packageRoot) {
+      return null;
+    }
+    dir = path.dirname(dir);
+  }
 }
 
 export function formatVersionLine(importMetaUrl?: string): string {
