@@ -36,12 +36,18 @@ type OperationName = (typeof TARGET_OPERATIONS)[number];
 const DISCOVERY_PAGES = [
   'https://x.com/?lang=en',
   'https://x.com/explore',
-  'https://x.com/notifications',
+  'https://x.com/notifications?lang=en',
   'https://x.com/settings/profile',
+  // X serves different shells by route and host. These two fallbacks have
+  // historically continued exposing the responsive client assets when the
+  // logged-out landing and onboarding routes only expose x-web assets.
+  'https://x.com/search?q=privatebird&src=typed_query&f=live',
+  'https://twitter.com/notifications?lang=en',
 ];
 
 const BUNDLE_URL_REGEX =
-  /https:\/\/abs\.twimg\.com\/responsive-web\/client-web(?:-legacy)?\/[A-Za-z0-9.-]+\.js/g;
+  /(?:https?:)?\/\/abs\.twimg\.com\/responsive-web\/client-web(?:-legacy)?\/[A-Za-z0-9._-]+\.js/g;
+const SCRIPT_SRC_REGEX = /<script\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1/gi;
 
 const OPERATION_PATTERNS = [
   // Modern bundles export operations like:
@@ -114,8 +120,28 @@ async function discoverBundles(): Promise<string[]> {
   for (const page of DISCOVERY_PAGES) {
     try {
       const html = await fetchText(page);
-      for (const match of html.matchAll(BUNDLE_URL_REGEX)) {
-        bundles.add(match[0]);
+      // X has used both absolute URLs embedded in hydration data and relative
+      // script src attributes. The latter is now the normal server-rendered
+      // form, so do not rely on one representation of the asset URL.
+      const normalizedHtml = html.replaceAll('\\/', '/');
+      for (const match of normalizedHtml.matchAll(BUNDLE_URL_REGEX)) {
+        bundles.add(match[0].startsWith('//') ? `https:${match[0]}` : match[0]);
+      }
+      for (const match of normalizedHtml.matchAll(SCRIPT_SRC_REGEX)) {
+        const source = match[2];
+        try {
+          const url = new URL(source, page);
+          if (
+            url.hostname === 'abs.twimg.com' &&
+            /^\/responsive-web\/client-web(?:-legacy)?\/[A-Za-z0-9._-]+\.js$/.test(
+              url.pathname,
+            )
+          ) {
+            bundles.add(url.toString());
+          }
+        } catch {
+          // Ignore malformed third-party script URLs and continue discovery.
+        }
       }
     } catch (error) {
       console.warn(`[warn] Could not fetch ${page}:`, error instanceof Error ? error.message : error);
