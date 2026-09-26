@@ -1,6 +1,6 @@
 {
   "name": "@matar/privatebird",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "PrivateBird CLI — fast X/Twitter from the terminal.",
   "type": "module",
   "main": "dist/index.js",

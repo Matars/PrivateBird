@@ -45,8 +45,13 @@ const DISCOVERY_PAGES = [
   'https://twitter.com/notifications?lang=en',
 ];
 
+// X migrated its logged-out shell from responsive-web/client-web to x-web/x-web.
+// Keep both locations because authenticated routes may still expose the legacy
+// client during a staged rollout.
+const CLIENT_BUNDLE_PATH =
+  /^(?:responsive-web\/client-web(?:-legacy)?|x-web\/x-web)\/[A-Za-z0-9._/-]+\.js$/;
 const BUNDLE_URL_REGEX =
-  /(?:https?:)?\/\/abs\.twimg\.com\/responsive-web\/client-web(?:-legacy)?\/[A-Za-z0-9._-]+\.js/g;
+  /(?:https?:)?\/\/abs\.twimg\.com\/(?:responsive-web\/client-web(?:-legacy)?|x-web\/x-web)\/[A-Za-z0-9._/-]+\.js/g;
 const SCRIPT_SRC_REGEX = /<script\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1/gi;
 
 const OPERATION_PATTERNS = [
@@ -133,9 +138,7 @@ async function discoverBundles(): Promise<string[]> {
           const url = new URL(source, page);
           if (
             url.hostname === 'abs.twimg.com' &&
-            /^\/responsive-web\/client-web(?:-legacy)?\/[A-Za-z0-9._-]+\.js$/.test(
-              url.pathname,
-            )
+            CLIENT_BUNDLE_PATH.test(url.pathname.slice(1))
           ) {
             bundles.add(url.toString());
           }
@@ -233,8 +236,11 @@ async function main(): Promise<void> {
   const existing = await readExistingIds();
 
   const discovered = await fetchAndExtract(bundleUrls, targets);
-  if (discovered.size === 0) {
+  if (discovered.size === 0 && Object.keys(existing).length === 0) {
     throw new Error('No query IDs discovered; extraction patterns may need an update.');
+  }
+  if (discovered.size === 0) {
+    console.warn('[warn] Current public client bundles expose no query IDs; retaining existing IDs.');
   }
 
   const nextIds: Record<OperationName, string> = { ...existing };
